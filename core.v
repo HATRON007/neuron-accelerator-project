@@ -22,8 +22,16 @@ module core #(
     wire signed [w-1 : 0] pow2_pos, pow2_neg, z1, z2, z3, z4, z5, z6, z7;
 
     // Instantiation
-    pow_2_function positive_v (.x(v), .y(pow2_pos));
-    pow_2_function negative_v (.x(-v), .y(pow2_neg));
+    pow_2_function #(
+        .w(w), 
+        .int_width(int_width), 
+        .frc_width(frc_width)
+    ) positive_v (.x(v), .y(pow2_pos));
+    pow_2_function #(
+        .w(w), 
+        .int_width(int_width), 
+        .frc_width(frc_width)
+    ) negative_v (.x(-v), .y(pow2_neg));
 
     // Combinational Logic
     assign z1 = ((pow2_neg - pow2_pos) <<< 1) + (pow2_neg - pow2_pos);  // 3 * (2^-v - 2^v)

@@ -1,4 +1,8 @@
-module pow_2_function(
+module pow_2_function #(
+    parameter w = 16,
+    parameter int_width = 3,
+    parameter frc_width = 12
+)(
     input wire [w-1 : 0] x,
     output wire [w-1 : 0] y
 );
