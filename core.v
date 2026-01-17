@@ -1,4 +1,4 @@
-module core #(
+module core #(    //#() called module's parameter port list
     // Constants
     localparam tau_shift = 2,
     localparam time_shift = 7,
