@@ -46,8 +46,8 @@ module core #(
     // Sequential Logic
     always @(posedge clk or posedge rst) begin
       if (rst) begin
-        v <= 0;
-        w_out <= 0;
+        v <= 16'hECE1;
+        w_out <= 16'hF600;
       end
       else begin
         v <= z7;
