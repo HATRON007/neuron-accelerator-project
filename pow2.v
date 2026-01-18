@@ -3,8 +3,8 @@ module pow_2_function #(
     parameter int_width = 3,
     parameter frc_width = 12
 )(
-    input wire [w-1 : 0] x,
-    output wire [w-1 : 0] y
+    input wire signed [w-1 : 0] x,
+    output wire signed [w-1 : 0] y
 );
     wire x_sign = x[w-1];
     wire [frc_width-1 : 0] x_frc  = x[frc_width-1 : 0];
