@@ -1,46 +1,99 @@
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 
-# 1. Load Data
-# Assuming the CSV is in the same folder
-try:
-    df = pd.read_csv("data.csv")
-except FileNotFoundError:
-    print("Error: data.csv not found. Run the Verilog simulation first!")
-    exit()
+# --- 1. CONFIGURATION ---
+FILE_NAME = "data.csv"
+SCALING_FACTOR = 4096.0  # 2^12
 
-# 2. Hardware Constants
-FRC_BITS = 12
-SCALE_FACTOR = 2**FRC_BITS  # 4096
-dt = 2**-7                  # Time step per clock cycle (from paper Eq 4)
+# FHN Parameters (Must match Verilog constants)
+DT  = 2**-7  # Time step
+TAU = 2.0
+A   = 0.7
+B   = 0.5    # Implemented as right shift 1
 
-# 3. Process Data
-# If your CSV has raw integers, convert them here. 
-# (The testbench already logs a float column 'v_float', but let's re-calculate to be safe)
-df['v_voltage'] = df['v_raw'] / SCALE_FACTOR
+# Hardware Approximation of nonlinear term: 3 * (2^-v - 2^v)
+def get_pow2_approx(x):
+    return 2.0**(-x) - 2.0**(x)
 
-# Create the Model Time axis (in ms)
-# Each row in the CSV represents one clock cycle = one dt step
-df['model_time_ms'] = df.index * dt
+# --- 2. LOAD DATA ---
+# Reads the CSV. If Verilog wrote consistent columns, this will be perfect.
+df = pd.read_csv(FILE_NAME)
 
-# 4. Plotting
-plt.figure(figsize=(10, 6))
+# Extract columns
+t_hw = df['time_step'].values
+v_hw = df['v_float'].values
+i_raw = df['i_raw'].values
 
-# Plot V vs Time
-plt.plot(df['model_time_ms'], df['v_voltage'], label='Membrane Potential (v)', color='#1f77b4', linewidth=1.5)
+# Convert Stimulus to float (e.g. 4096 -> 1.0)
+i_stim = i_raw / SCALING_FACTOR
 
-# Add Threshold line (Optional, visual guide)
-plt.axhline(y=0, color='gray', linestyle='--', alpha=0.5, label='0V Reference')
+# Setup Python Arrays
+num_steps = len(df)
+v_py = np.zeros(num_steps)
+w_py = np.zeros(num_steps)
 
-# Formatting to match Paper 
-plt.title(f"FHN Neuron Response (Input Current I $\\approx$ 0.8)", fontsize=14)
-plt.xlabel("Model Time (ms)", fontsize=12)
-plt.ylabel("Membrane Potential (V)", fontsize=12)
-plt.grid(True, which='both', linestyle='--', alpha=0.7)
+# --- 3. INITIAL CONDITIONS ---
+# Matches Verilog reset values: v = 0xECE1 (-1.19), w = 0xF600 (-0.625)
+v_py[0] = -1.19
+w_py[0] = -0.625
+
+v = v_py[0]
+w = w_py[0]
+
+# --- 4. SIMULATION LOOP ---
+print(f"Running Python Model for {num_steps} cycles...")
+
+for k in range(1, num_steps):
+    # Get current input current (from previous timestep)
+    I = i_stim[k-1]
+    
+    # --- MATH CORE (Matches Hardware Logic) ---
+    
+    # Nonlinear term: g(v) = 3 * (2^-v - 2^v)
+    g_v = 3.0 * get_pow2_approx(v)
+    
+    # Linear term: 5 * v
+    linear_v = 5.0 * v
+    
+    # Slope calculation
+    dv = DT * (linear_v + g_v - w + I)
+    
+    # Recovery calculation
+    dw = (DT / TAU) * (v + A - B * w)
+    
+    # Update State (Euler Integration)
+    v = v + dv
+    w = w + dw
+    
+    # Store result
+    v_py[k] = v
+    w_py[k] = w
+
+# --- 5. ERROR ANALYSIS ---
+# Calculate RMSE
+error = v_hw - v_py
+mse = np.mean(error**2)
+rmse = np.sqrt(mse)
+
+print(f"Validation Complete.")
+print(f"RMSE: {rmse:.5f}")
+
+# --- 6. PLOTTING ---
+plt.figure(figsize=(12, 6))
+
+# Plot Python Model (Reference)
+plt.plot(t_hw, v_py, 'r--', linewidth=2, label='Python Ideal')
+
+# Plot Hardware Output
+plt.plot(t_hw, v_hw, 'b-', alpha=0.6, label='Verilog Hardware')
+
+plt.title(f"Validation: Hardware vs Python (RMSE: {rmse:.4f})")
+plt.xlabel("Simulation Time (ns)")
+plt.ylabel("Membrane Potential (V)")
 plt.legend()
-plt.tight_layout()
+plt.grid(True, linestyle='--', alpha=0.6)
 
-# Save and Show
-plt.savefig("fhn_response.png", dpi=300)
-print("Plot saved as fhn_response.png")
+plt.tight_layout()
+plt.savefig("validation_full.png")
 plt.show()

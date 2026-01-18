@@ -31,7 +31,8 @@ module tb_fhn;
             $finish;
         end
         
-        $fdisplay(file, "time_step,v_raw,v_float");
+        // CSV Header: Consistent 4 columns
+        $fdisplay(file, "time_step,v_raw,v_float,i_raw");
 
         rst = 1; 
         i_stim = 0;
@@ -40,20 +41,24 @@ module tb_fhn;
         rst = 0;
         #100; 
 
-        i_stim = 16'd4098; 
-        $display("Applying Stimulus I = 0.1...");
+        // --- STIMULUS PHASE ---
+        i_stim = 16'd4096; 
+        $display("Applying Stimulus...");
 
         repeat (4000) begin
             @(posedge clk);
-            $fdisplay(file, "%0d,%d,%f", $time, $signed(v_out), $signed(v_out)/scaling_factor);
+            // write 4 columns
+            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
         end
 
+        // --- RELAXATION PHASE ---
         i_stim = 16'd0;
         $display("Removing Stimulus...");
 
         repeat (20000) begin
             @(posedge clk);
-            $fdisplay(file, "%0d,%d,%f", $time, $signed(v_out), $signed(v_out)/scaling_factor);
+            // FIXED: write 4 columns here too (i_stim is 0)
+            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
         end
 
         $display("Simulation Finished. Data written to data.csv");
