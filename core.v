@@ -28,6 +28,8 @@ module core #(    //#() called module's parameter port list
     assign w_ext = {{4{w_out[w-1]}}, w_out};
     assign i_ext = {{4{i[w-1]}}, i};
     
+    wire signed [19:0] z5_raw;
+    localparam signed [19:0] THRESHOLD = 20'd175;
 
     // Instantiation
     pow_2_function #(
@@ -48,7 +50,8 @@ module core #(    //#() called module's parameter port list
 
     assign z4 = (z3 + 128) >>> total_shift;
     //assign z4 = (z3) >>> total_shift;
-    assign z5 = z1 + z2 - w_ext + i_ext;
+    assign z5_raw = z1 + z2 - w_ext + i_ext;
+    assign z5 = (z5_raw > -THRESHOLD && z5_raw < THRESHOLD) ? 20'd0 : z5_raw;
     assign z6 = w_out + z4;
     assign z7 = v + $signed((z5 + 64) >>> time_shift);
     //assign z7 = v + $signed((z5) >>> time_shift);
