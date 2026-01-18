@@ -52,7 +52,7 @@ module tb_fhn;
         // 3. Apply Stimulus
         // Value 3277 corresponds to ~0.8 in Q3.12 format
         // Paper uses I=0.5 (2048) or I=1.0 (4096) for testing.
-        i_stim = 16'd4096; 
+        i_stim = 16'd4098; 
         $display("Applying Stimulus I = 0.8...");
 
         // Run for 4000 cycles (Spiking Phase)
