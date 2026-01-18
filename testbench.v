@@ -44,7 +44,7 @@ module tb_fhn;
         // --- STIMULUS PHASE ---
         i_stim = 16'd2048; 
         $display("Applying Stimulus...");
-        repeat (4000) begin
+        repeat (10000) begin
             @(posedge clk);
             // write 4 columns
             $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
@@ -68,14 +68,7 @@ module tb_fhn;
 
         i_stim = 16'd2048;
         $display("Applying half Stimulus...");
-        repeat (4000) begin
-            @(posedge clk);
-            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
-        end
-
-        i_stim = 16'd1024;
-        $display("Applying half Stimulus...");
-        repeat (4000) begin
+        repeat (10000) begin
             @(posedge clk);
             $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
         end
