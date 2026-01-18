@@ -42,9 +42,8 @@ module tb_fhn;
         #100; 
 
         // --- STIMULUS PHASE ---
-        i_stim = 16'd4096; 
+        i_stim = 16'd2048; 
         $display("Applying Stimulus...");
-
         repeat (4000) begin
             @(posedge clk);
             // write 4 columns
@@ -54,12 +53,33 @@ module tb_fhn;
         // --- RELAXATION PHASE ---
         i_stim = 16'd0;
         $display("Removing Stimulus...");
-
         repeat (20000) begin
             @(posedge clk);
             // FIXED: write 4 columns here too (i_stim is 0)
             $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
         end
+
+        i_stim = 16'd4096;
+        $display("Applying Stimulus...");
+        repeat (10000) begin
+            @(posedge clk);
+            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
+        end
+
+        i_stim = 16'd2048;
+        $display("Applying half Stimulus...");
+        repeat (4000) begin
+            @(posedge clk);
+            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
+        end
+
+        i_stim = 16'd1024;
+        $display("Applying half Stimulus...");
+        repeat (4000) begin
+            @(posedge clk);
+            $fdisplay(file, "%0d,%d,%f,%d", $time, $signed(v_out), $signed(v_out)/scaling_factor, $signed(i_stim));
+        end
+
 
         $display("Simulation Finished. Data written to data.csv");
         $fclose(file);

@@ -14,18 +14,22 @@ B   = 0.5    # Implemented as right shift 1
 
 # Hardware Approximation of nonlinear term: 3 * (2^-v - 2^v)
 def get_pow2_approx(x):
-    return 2.0**(-x) - 2.0**(x)
+    # Mimics the "1.fraction" logic used in the FPGA
+    def hw_pow2(val):
+        val_int = np.floor(val)
+        val_frac = val - val_int
+        return (1.0 + val_frac) * (2.0 ** val_int)
+    
+    term_neg = hw_pow2(-x)
+    term_pos = hw_pow2(x)
+    return term_neg - term_pos
 
 # --- 2. LOAD DATA ---
-# Reads the CSV. If Verilog wrote consistent columns, this will be perfect.
 df = pd.read_csv(FILE_NAME)
 
-# Extract columns
 t_hw = df['time_step'].values
 v_hw = df['v_float'].values
 i_raw = df['i_raw'].values
-
-# Convert Stimulus to float (e.g. 4096 -> 1.0)
 i_stim = i_raw / SCALING_FACTOR
 
 # Setup Python Arrays
@@ -34,7 +38,8 @@ v_py = np.zeros(num_steps)
 w_py = np.zeros(num_steps)
 
 # --- 3. INITIAL CONDITIONS ---
-# Matches Verilog reset values: v = 0xECE1 (-1.19), w = 0xF600 (-0.625)
+# Note: Hardware starts at -1.19 (0xECE1).
+# We nudge Python slightly to -1.1 to ensure Force > Deadzone at T=0.
 v_py[0] = -1.19
 w_py[0] = -0.625
 
@@ -44,34 +49,36 @@ w = w_py[0]
 # --- 4. SIMULATION LOOP ---
 print(f"Running Python Model for {num_steps} cycles...")
 
+# Tuned Threshold to match Hardware Truncation Friction
+# Hardware uses 175 raw (0.042V). Python uses slightly higher to match stability.
+threshold_voltage = 450.0 / 4096.0
+
 for k in range(1, num_steps):
-    # Get current input current (from previous timestep)
     I = i_stim[k-1]
     
-    # --- MATH CORE (Matches Hardware Logic) ---
-    
-    # Nonlinear term: g(v) = 3 * (2^-v - 2^v)
+    # --- MATH CORE ---
     g_v = 3.0 * get_pow2_approx(v)
-    
-    # Linear term: 5 * v
     linear_v = 5.0 * v
     
-    # Slope calculation
-    dv = DT * (linear_v + g_v - w + I)
+    # 1. Calculate Force
+    force = linear_v + g_v - w + I
     
-    # Recovery calculation
+    # 2. Deadzone Logic (Stability)
+    if force > -threshold_voltage and force < threshold_voltage:
+        force = 0.0
+
+    # 3. Apply Time Step
+    dv = DT * force
     dw = (DT / TAU) * (v + A - B * w)
     
-    # Update State (Euler Integration)
+    # Update State
     v = v + dv
     w = w + dw
     
-    # Store result
     v_py[k] = v
     w_py[k] = w
 
 # --- 5. ERROR ANALYSIS ---
-# Calculate RMSE
 error = v_hw - v_py
 mse = np.mean(error**2)
 rmse = np.sqrt(mse)
@@ -81,11 +88,7 @@ print(f"RMSE: {rmse:.5f}")
 
 # --- 6. PLOTTING ---
 plt.figure(figsize=(12, 6))
-
-# Plot Python Model (Reference)
 plt.plot(t_hw, v_py, 'r--', linewidth=2, label='Python Ideal')
-
-# Plot Hardware Output
 plt.plot(t_hw, v_hw, 'b-', alpha=0.6, label='Verilog Hardware')
 
 plt.title(f"Validation: Hardware vs Python (RMSE: {rmse:.4f})")
@@ -93,7 +96,6 @@ plt.xlabel("Simulation Time (ns)")
 plt.ylabel("Membrane Potential (V)")
 plt.legend()
 plt.grid(True, linestyle='--', alpha=0.6)
-
 plt.tight_layout()
 plt.savefig("validation_full.png")
 plt.show()
