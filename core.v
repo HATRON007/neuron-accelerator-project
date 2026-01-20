@@ -1,15 +1,12 @@
 module core #(    
-    // Constants
     localparam tau_shift = 1,
     localparam time_shift = 7,
     localparam total_shift = tau_shift + time_shift,
 
-    // Widths
     parameter int_width = 3,
     parameter frc_width = 12,
-    localparam w = 1 + int_width + frc_width, // Total Width (16)
+    localparam w = 1 + int_width + frc_width,
     
-    // Coefficient 'a' (0.7 in fixed point)
     localparam signed [w-1 : 0] a = 16'd2867
 )(
     input  wire clk,
@@ -19,22 +16,18 @@ module core #(
     output reg  signed [w-1 : 0] w_out
 );
 
-    // Internal Signals
     wire signed [w-1 : 0] pow2_pos, pow2_neg;
     wire signed [19 : 0] z1, z2, z5;
     wire signed [19 : 0] v_ext, w_ext, i_ext, diff_ext;
     wire signed [w-1 : 0] z3, z4, z6, z7;
     wire signed [19:0] z5_raw;
 
-    // Deadzone Threshold (Noise Gating)
     localparam signed [19:0] THRESHOLD = 20'd175;
 
-    // Sign Extension
     assign v_ext = {{4{v[w-1]}}, v};
     assign w_ext = {{4{w_out[w-1]}}, w_out};
     assign i_ext = {{4{i[w-1]}}, i};
     
-    // --- NON-LINEAR FUNCTION INSTANTIATION ---
     pow_2_function #(
         .w(w), 
         .int_width(int_width), 
@@ -70,7 +63,6 @@ module core #(
     assign z6 = w_out + z4; 
     assign z7 = v + $signed((z5 + 64) >>> time_shift); // Includes rounding (+64)
 
-    // --- SEQUENTIAL LOGIC ---
     always @(posedge clk or posedge rst) begin
       if (rst) begin
         v <= 16'hECE1;     // -1.19
