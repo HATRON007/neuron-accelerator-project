@@ -5,8 +5,7 @@ module core #(
 
     parameter int_width = 3,
     parameter frc_width = 12,
-    localparam w = 1 + int_width + frc_width,
-    
+    localparam w = 1 + int_width + frc_width
 )(
     input  wire clk,
     input  wire rst,
@@ -23,7 +22,7 @@ module core #(
 
     localparam signed [w-1 : 0] a = 16'd2867;
     localparam signed [19 : 0] THRESHOLD = 20'd175;
-    
+
     pow_2_function #(
         .w(w),
         .int_width(int_width), 
