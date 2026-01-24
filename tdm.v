@@ -5,23 +5,24 @@ module tdm_controller #(
 )(
     input wire clk,
     input wire rst,
-    input wire signed [data_width-1 : 0] i_stim
-    // input wire [$clog2(neuron_count)-1 : 0] monitor_id,
-    // output reg signed [data_width-1 : 0] v_out_monitor,
-    // output reg signed [data_width-1 : 0] w_out_monitor
+    input wire signed [data_width-1 : 0] i_stim,
+    input wire [$clog2(neuron_count)-1 : 0] monitor_id,
+    output reg signed [data_width-1 : 0] v_out_monitor,
+    output reg signed [data_width-1 : 0] w_out_monitor
 );
 
-    reg signed [data_width-1 : 0] ram_v [0 : neuron_count-1];
-    reg signed [data_width-1 : 0] ram_w [0 : neuron_count-1];
+    (* ram_style = "block" *) reg signed [data_width-1 : 0] ram_v [0 : neuron_count-1];
+    (* ram_style = "block" *) reg signed [data_width-1 : 0] ram_w [0 : neuron_count-1];
+    
     localparam ptr_width = $clog2(neuron_count);
 
     reg [ptr_width-1 : 0] ptr_read;
     reg [ptr_width-1 : 0] ptr_write;
-
     reg pipeline_primed;
 
     reg signed [data_width-1 : 0] core_v_in, core_w_in;
-    wire signed [data_width-1 : 0] core_v_out, core_w_out;
+    
+    (* keep *) wire signed [data_width-1 : 0] core_v_out, core_w_out;
 
     core core_tdm (
         .clk(clk),
@@ -35,18 +36,21 @@ module tdm_controller #(
 
     integer k;
 
+    initial begin
+        for(k=0; k<neuron_count; k=k+1) begin
+            ram_v[k] = 16'hECE1; // -1.19V
+            ram_w[k] = 16'hF600; // -0.625
+        end
+    end
+
     always @(posedge clk) begin
       if(rst) begin
         ptr_read <= 0;
         ptr_write <= neuron_count - pipeline_depth;
         pipeline_primed <= 0;
         
-        for(k=0; k<neuron_count; k=k+1) begin
-            ram_v[k] <= 16'hECE1;
-            ram_w[k] <= 16'hF600;
-        end
-        // v_out_monitor <= 0;
-        // w_out_monitor <= 0;
+        v_out_monitor <= 0;
+        w_out_monitor <= 0;
       end
 
       else begin
@@ -55,11 +59,10 @@ module tdm_controller #(
             ram_w[ptr_write] <= core_w_out;
         end
 
-        // Monitor logic: Update output even if not writing to RAM (for debugging)
-        // if(ptr_write == monitor_id) begin
-        //     v_out_monitor <= core_v_out;
-        //     w_out_monitor <= core_w_out;
-        // end
+        if(ptr_write == monitor_id) begin
+            v_out_monitor <= core_v_out;
+            w_out_monitor <= core_w_out;
+        end
 
         core_v_in <= ram_v[ptr_read];
         core_w_in <= ram_w[ptr_read];

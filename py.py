@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 FILE_NAME = "data.csv"
 SCALING_FACTOR = 4096.0
 
-IDS_TO_PLOT = [0, 150, 300, 499] 
+IDS_TO_PLOT = [0, 150, 498] 
 
 DT  = 2**-7
 TAU = 2.0
@@ -48,7 +48,7 @@ def run_ideal_model(stimulus_array):
 print(f"Loading {FILE_NAME}...")
 df = pd.read_csv(FILE_NAME)
 
-print("Generating 4 separate windows...")
+print("Generating dynamic comparison plots...")
 
 for n_id in IDS_TO_PLOT:
     subset = df[df['neuron_id'] == n_id].reset_index(drop=True)
@@ -59,30 +59,55 @@ for n_id in IDS_TO_PLOT:
 
     v_hw = subset['v_float'].values
     t_axis = subset['time_ns'].values
+    num_steps = len(v_hw)
 
-    if n_id == 0 or n_id == 150:
-        i_stim = np.full(len(v_hw), 1.0)
-    else:
-        i_stim = np.zeros(len(v_hw))
+    i_stim = np.zeros(num_steps)
+    
+    if n_id == 0:
+        i_stim[:] = 1.0
+        title_text = "Neuron 0 (Constant 1.0)"
+
+    elif n_id == 150:
+        limit1 = min(3500, num_steps)
+        i_stim[0:limit1] = 0.5
+        
+        if num_steps > 3500:
+            limit2 = min(7000, num_steps)
+            i_stim[3500:limit2] = 0.0
+            
+        if num_steps > 7000:
+            i_stim[7000:] = 1.0
+            
+        title_text = "Neuron 150 (Dynamic: 0.5 -> 0.0 -> 1.0)"
+
+    elif n_id == 498:
+        title_text = "Neuron 498 (Constant 0.0)"
 
     v_model = run_ideal_model(i_stim)
 
-    limit = min(len(v_hw), len(v_model))
-    error = v_hw[:limit] - v_model[:limit]
+    error = v_hw - v_model
     rmse = np.sqrt(np.mean(error**2))
 
     plt.figure(figsize=(10, 6))
     
-    plt.plot(t_axis[:limit], v_model[:limit], 'r--', linewidth=2, label='Python Math Model')
-    plt.plot(t_axis[:limit], v_hw[:limit], 'b-', alpha=0.6, label='Verilog Hardware')
-    
-    plt.title(f"Neuron ID: {n_id} (RMSE: {rmse:.4f})")
-    plt.xlabel("Simulation Time (ns)")
+    plt.subplot(2, 1, 1)
+    plt.plot(t_axis, v_model, 'r--', linewidth=2, label='Python Model')
+    plt.plot(t_axis, v_hw, 'b-', alpha=0.6, label='Verilog Hardware')
     plt.ylabel("Membrane Potential (V)")
+    plt.title(f"{title_text} | RMSE: {rmse:.4f}")
+    plt.legend(loc='upper right')
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.legend()
+
+    plt.subplot(2, 1, 2)
+    plt.plot(t_axis, i_stim, 'g-', linewidth=2, label='Input Current (I)')
+    plt.ylabel("Current (I)")
+    plt.xlabel("Simulation Time (ns)")
+    plt.legend(loc='upper right')
+    plt.grid(True, linestyle='--', alpha=0.6)
     
-    filename = f"neuron_{n_id}_validation.png"
+    plt.tight_layout()
+    
+    filename = f"neuron_{n_id}_dynamic_validation.png"
     plt.savefig(filename)
     print(f"Saved {filename}")
 
