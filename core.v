@@ -3,8 +3,8 @@ module core #(
     localparam time_shift = 7,
     localparam total_shift = tau_shift + time_shift,
 
-    parameter int_width = 3,
-    parameter frc_width = 12,
+    localparam int_width = 3,
+    localparam frc_width = 12,
     localparam w = 1 + int_width + frc_width
 )(
     input  wire clk,

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "🔧 Compiling Verilog..."
-iverilog -g2012 -o fhn_sim pow2.v core.v testbench.v
+iverilog -g2012 -o fhn_sim pow2.v core.v tdm.v testbench.v
 if [ $? -ne 0 ]; then
     echo "❌ Verilog compilation failed!"
     exit 1
