@@ -5,7 +5,7 @@ module tdm_controller #(
 )(
     input wire clk,
     input wire rst,
-    input wire signed [data_width-1 : 0] i_stim`
+    input wire signed [data_width-1 : 0] i_stim
     // input wire [$clog2(neuron_count)-1 : 0] monitor_id,
     // output reg signed [data_width-1 : 0] v_out_monitor,
     // output reg signed [data_width-1 : 0] w_out_monitor
@@ -39,7 +39,7 @@ module tdm_controller #(
       if(rst) begin
         ptr_read <= 0;
         ptr_write <= neuron_count - pipeline_depth;
-        pipeline_primed <= 0; // Reset the flag
+        pipeline_primed <= 0;
         
         for(k=0; k<neuron_count; k=k+1) begin
             ram_v[k] <= 16'hECE1;

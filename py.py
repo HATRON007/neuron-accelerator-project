@@ -58,8 +58,12 @@ for n_id in IDS_TO_PLOT:
         continue
 
     v_hw = subset['v_float'].values
-    i_stim = subset['i_raw'].values / SCALING_FACTOR
     t_axis = subset['time_ns'].values
+
+    if n_id == 0 or n_id == 150:
+        i_stim = np.full(len(v_hw), 1.0)
+    else:
+        i_stim = np.zeros(len(v_hw))
 
     v_model = run_ideal_model(i_stim)
 
@@ -78,8 +82,8 @@ for n_id in IDS_TO_PLOT:
     plt.grid(True, linestyle='--', alpha=0.6)
     plt.legend()
     
-    # filename = f"neuron_{n_id}_validation.png"
-    # plt.savefig(filename)
-    # print(f"Saved {filename}")
+    filename = f"neuron_{n_id}_validation.png"
+    plt.savefig(filename)
+    print(f"Saved {filename}")
 
     plt.show()

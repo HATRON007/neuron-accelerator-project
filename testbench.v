@@ -9,7 +9,6 @@ module tb_tdm;
     reg rst;
     reg signed [DATA_WIDTH-1:0] i_stim;
     // reg [$clog2(NEURON_COUNT)-1:0] monitor_id;
-    
     // wire signed [DATA_WIDTH-1:0] v_mon;
     // wire signed [DATA_WIDTH-1:0] w_mon;
 
@@ -32,6 +31,15 @@ module tb_tdm;
     initial clk = 0;
     always #5 clk = ~clk; 
 
+    always @(posedge clk) begin
+        if (rst) i_stim <= 0;
+        else begin
+            if(uut.ptr_read == 0 || uut.ptr_read == 150) i_stim <= 16'd4096;
+            else i_stim <= 16'd0;
+        end
+    end
+
+
     initial begin
         file = $fopen("data.csv", "w");
         $fdisplay(file, "time_ns,neuron_id,v_float,i_raw");
@@ -44,23 +52,24 @@ module tb_tdm;
         rst = 0;
         #100;
         
-        i_stim = 16'd4096; 
+    
+        // i_stim = 16'd4096; 
         
-        repeat(NEURON_COUNT * 4000) begin
+        repeat(NEURON_COUNT * 10000) begin
             @(posedge clk);
         end
         
-        i_stim = 0;
+        // i_stim = 0;
         
-        repeat(NEURON_COUNT * 4000) begin
-            @(posedge clk);
-        end
+        // repeat(NEURON_COUNT * 4000) begin
+        //     @(posedge clk);
+        // end
 
-        i_stim = 16'd2048; 
+        // i_stim = 16'd2048; 
         
-        repeat(NEURON_COUNT * 4000) begin
-            @(posedge clk);
-        end
+        // repeat(NEURON_COUNT * 4000) begin
+        //     @(posedge clk);
+        // end
 
         $fclose(file);
         $finish;
@@ -68,8 +77,10 @@ module tb_tdm;
 
     always @(posedge clk) begin
         if (!rst) begin
-            v_real = $signed(uut.core_v_out) / 4096.0;
-            $fdisplay(file, "%0d,%0d,%0f,%0d", $time, uut.ptr_write, v_real, $signed(i_stim));
+            if(uut.pipeline_primed) begin
+                v_real = $signed(uut.core_v_out) / 4096.0;
+                $fdisplay(file, "%0d,%0d,%0f,%0d", $time, uut.ptr_write, v_real, $signed(i_stim));
+            end
         end
     end
 
